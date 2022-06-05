@@ -1,58 +1,28 @@
 package src
 
 import (
-	"fmt"
+	"database/sql"
 	"log"
 
-	"github.com/abesheknarayan/go-fast-sqlite-inserts/db"
 	"github.com/abesheknarayan/go-fast-sqlite-inserts/models"
 )
 
-func Naive(numberOfRows uint64) {
-	sqliteDB, err := db.NewDB("file:data/users.db")
-
-	if err != nil {
-		fmt.Errorf("Error while creating db instance %s", err)
-	}
-
-	err = db.RunMigrationScripts(sqliteDB)
-
-	if err != nil {
-		fmt.Printf("failed running migrations %s \n", err.Error())
-	}
-
+func Naive(numberOfRows uint64, sqliteDB *sql.DB) {
 	tx, err := sqliteDB.Begin()
 
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-
-	newUser := &models.User{
-		Id:     1,
-		Area:   "trichy",
-		Age:    21,
-		Active: 1,
-	}
-
 	UserInsertionQuery := "insert into user(id,area,age,active) values(?,?,?,?)"
 
-	tx.Exec(UserInsertionQuery, newUser.Id, newUser.Area, newUser.Age, newUser.Active)
-
-	UserSearchQuery := "select * from user"
-
-	result, err := tx.Query(UserSearchQuery)
-
-	if err != nil {
-		log.Fatalf(err.Error())
-	}
-
-	for result.Next() {
-		var id, age, active uint32
-		var area string
-		if err := result.Scan(&id, &area, &age, &active); err != nil {
-			log.Fatalf(err.Error())
+	for i := uint64(0); i < numberOfRows; i++ {
+		newUser := &models.User{
+			Id:     uint32(i + 1),
+			Area:   GenerateRandomAreaCode(),
+			Age:    GenerateRandomAge(),
+			Active: GenerateRandomBooleanInt(),
 		}
-		fmt.Println(id, area, age, active)
+		tx.Exec(UserInsertionQuery, newUser.Id, newUser.Area, newUser.Age, newUser.Active)
 	}
-
+	tx.Commit()
 }
