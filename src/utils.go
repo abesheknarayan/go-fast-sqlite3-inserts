@@ -20,33 +20,19 @@ func GenerateRandomBooleanInt() uint32 {
 	return uint32((rand.Int31n(2)))
 }
 
-func TruncateUserTable(sqliteDB *sql.DB) error {
-	truncateQuery := "truncate user"
-	tx, err := sqliteDB.Begin()
-
-	if err != nil {
-		return fmt.Errorf(err.Error())
-	}
-
-	tx.Exec(truncateQuery)
-
-	tx.Commit()
-	return nil
-}
-
 // checks if number of rows given are present in the table
-func ValidateTable(numberOfRows uint64, sqliteDB *sql.DB) bool {
+func ValidateTable(numberOfRows uint64, sqliteDB *sql.DB) (bool, uint64) {
 	tx, err := sqliteDB.Begin()
 
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Panicf(err.Error())
 	}
 
 	CountRowsQuery := "select count(*) from user"
 	res, err := tx.Query(CountRowsQuery)
 
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Panicf(err.Error())
 	}
 
 	var nrows uint64
@@ -54,8 +40,10 @@ func ValidateTable(numberOfRows uint64, sqliteDB *sql.DB) bool {
 	res.Next()
 
 	if err := res.Scan(&nrows); err != nil {
-		log.Fatalf(err.Error())
+		log.Panicf(err.Error())
 	}
 
-	return numberOfRows == nrows
+	tx.Commit()
+
+	return numberOfRows == nrows, nrows
 }

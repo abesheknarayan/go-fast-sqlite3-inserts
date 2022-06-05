@@ -25,7 +25,7 @@ func NewDB(dbPath string) (*sql.DB, error) {
 	return sqliteDB, nil
 }
 
-func RunMigrationScripts(db *sql.DB) error {
+func RunMigrationUpScripts(db *sql.DB) error {
 
 	// reads migrations from vfs by making a file server with go:embed (TODO: know y it is this way or any alternatives present)
 	sourceInstance, err := httpfs.New(http.FS(migrations), "migrations")
@@ -52,4 +52,31 @@ func RunMigrationScripts(db *sql.DB) error {
 
 	return sourceInstance.Close()
 
+}
+
+func RunMigrationDownScripts(db *sql.DB) error {
+	// reads migrations from vfs by making a file server with go:embed (TODO: know y it is this way or any alternatives present)
+	sourceInstance, err := httpfs.New(http.FS(migrations), "migrations")
+
+	if err != nil {
+		return fmt.Errorf("error while creating migrations instance %s", err)
+	}
+
+	driver, err := sqlite3.WithInstance(db, &sqlite3.Config{})
+
+	if err != nil {
+		return fmt.Errorf("creating sqlite3 driver failed %s", err)
+	}
+	m, err := migrate.NewWithInstance("https", sourceInstance, "sqlite3", driver)
+	if err != nil {
+		return fmt.Errorf("failed to initialize migrate instance, %w", err)
+	}
+
+	// down migrations
+	err = m.Down()
+	if err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	return sourceInstance.Close()
 }
