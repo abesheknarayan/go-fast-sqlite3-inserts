@@ -10,8 +10,8 @@ import (
 )
 
 func main() {
-	numberOfRows := 1e6
-	fmt.Println(numberOfRows)
+	numberOfRows := uint64(1e6)
+	fmt.Printf("Number of rows: %d\n", numberOfRows)
 	sqliteDB, err := db.NewDB("file:data/users.db")
 
 	if err != nil {
@@ -25,6 +25,10 @@ func main() {
 	src.Runner(src.M_Naive_Prepared, uint64(numberOfRows), sqliteDB)
 
 	src.Runner(src.M_Naive_Pragma_Optimized, uint64(numberOfRows), sqliteDB)
+
+	src.Runner(src.M_Batched_Optimized_Prepared, uint64(numberOfRows), sqliteDB)
+
+	// src.BatchedCheck(sqliteDB)
 
 	defer func() {
 		// run down migrations

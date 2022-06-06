@@ -14,8 +14,6 @@ import (
 //go:embed migrations
 var migrations embed.FS
 
-const schemaVersion = 1
-
 func NewDB(dbPath string) (*sql.DB, error) {
 	sqliteDB, err := sql.Open("sqlite3", dbPath)
 	if err != nil {
