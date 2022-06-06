@@ -1,5 +1,8 @@
 # go-fast-sqlite3-inserts
-Go programs to generate a 1B row SQLite3 DB as fast as possible
+Playing around Golang + Sqlite3 to insert 100M rows as fast as possible
+
+#### Status
+Could insert upto 1e8 rows on my machine (with multiple crashes due to RAM overload). Will try to add more optimizations and documentation soon.
 
 #### Resources
 - [Avinassh Blog](https://avi.im/blag/2021/fast-sqlite-inserts/)

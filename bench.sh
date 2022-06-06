@@ -1,1 +1,2 @@
-time go run main.go
+rm -rf data/*
+go run main.go > bench.txt

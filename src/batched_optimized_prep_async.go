@@ -6,12 +6,23 @@ import (
 	"log"
 	"math"
 	"strings"
+	"sync"
 
 	"github.com/abesheknarayan/go-fast-sqlite-inserts/models"
 )
 
-// batched + pragma optimized + prepared without go-routines
-func BatchedPragmaOptimizedPrepared(numberOfRows uint64, sqliteDB *sql.DB) {
+/*
+- Outchannel receives all the batches but the last one from the worker go-routine pool
+- Reason for using channel: preparing same statement and used go-routines to parallely compute query Args (random user) and send it to buffer channel which is recieved in the main go-routine one by one and executed along with the same prepared statement
+- Remaining args are batched inserted normally without any channels
+*/
+
+/*
+TODO : Cleanup stuff
+*/
+
+// batched + pragma optimized + prepared + async with go-routines
+func BatchedPragmaOptimizedPreparedAsync(numberOfRows uint64, sqliteDB *sql.DB) {
 	_, err := sqliteDB.Exec(`PRAGMA journal_mode = OFF;
     						 PRAGMA synchronous = 0; 
               				 PRAGMA cache_size = 1000000;
@@ -28,8 +39,9 @@ func BatchedPragmaOptimizedPrepared(numberOfRows uint64, sqliteDB *sql.DB) {
 	batchSize := 50
 	numberOfBatches := int(math.Floor(float64(numberOfRows) / float64(batchSize)))
 
+	outChan := make(chan []interface{}, numberOfBatches)
+
 	queryString1 := make([]string, 0, batchSize)
-	queryArgs1 := make([][]interface{}, 0, batchSize*4)
 
 	for i := uint64(0); i < uint64(batchSize); i++ {
 		queryString1 = append(queryString1, "(?,?,?,?)")
@@ -37,14 +49,18 @@ func BatchedPragmaOptimizedPrepared(numberOfRows uint64, sqliteDB *sql.DB) {
 
 	stmnt1 := fmt.Sprintf("insert into user(id,area,age,active) values %s", strings.Join(queryString1, ","))
 
+	var wg sync.WaitGroup
+
 	// except the last batch which may not be fully filled
 	for i := uint64(0); i < uint64(numberOfBatches); i++ {
 		// ith batch has contents from [ i*batchSize , (i + 1) * uint64(batchSize) - 1]
 		l := i * uint64(batchSize)
 		r := (i + 1) * uint64(batchSize)
-		result := ComputeBatchAndReturnArgs(l, r)
-		queryArgs1 = append(queryArgs1, result)
+		wg.Add(1)
+		go ComputeBatchAndPushItToChannel(l, r, outChan, &wg)
 	}
+	wg.Wait()
+	close(outChan)
 
 	// last batch which contains remaining elements
 
@@ -83,8 +99,8 @@ func BatchedPragmaOptimizedPrepared(numberOfRows uint64, sqliteDB *sql.DB) {
 		fmt.Println(err.Error())
 	}
 
-	for args := range queryArgs1 {
-		_, err := preparedStatement1.Exec(queryArgs1[args]...)
+	for args := range outChan {
+		_, err := preparedStatement1.Exec(args...)
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -109,7 +125,11 @@ func BatchedPragmaOptimizedPrepared(numberOfRows uint64, sqliteDB *sql.DB) {
 	tx.Commit()
 }
 
-func ComputeBatchAndReturnArgs(l uint64, r uint64) []interface{} {
+func ComputeBatchAndPushItToChannel(l uint64, r uint64, outChan chan []interface{}, wg *sync.WaitGroup) {
+	defer func() {
+		wg.Done()
+	}()
+
 	len := r - l
 	queryArgs := make([]interface{}, 0, len*4)
 	for i := l; i < r; i++ {
@@ -125,5 +145,5 @@ func ComputeBatchAndReturnArgs(l uint64, r uint64) []interface{} {
 		queryArgs = append(queryArgs, newUser.Age)
 		queryArgs = append(queryArgs, newUser.Active)
 	}
-	return queryArgs
+	outChan <- queryArgs
 }

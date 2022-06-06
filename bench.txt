@@ -1,0 +1,7 @@
+Number of rows: 1000007
+Time in seconds for M_Naive: 7.447582 seconds 
+Time in seconds for M_Naive_Async: 10.524757 seconds 
+Time in seconds for M_Naive_Prepared: 4.406861 seconds 
+Time in seconds for M_Naive_Pragma_Optimized: 2.364110 seconds 
+Time in seconds for M_Batched_Optimized_Prepared: 1.330842 seconds 
+Time in seconds for M_Batched_Optimized_Prepared_Async: 2.028506 seconds 

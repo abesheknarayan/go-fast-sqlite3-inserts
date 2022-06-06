@@ -18,6 +18,7 @@ const (
 	M_Naive_Async_Prepared
 	M_Naive_Pragma_Optimized
 	M_Batched_Optimized_Prepared
+	M_Batched_Optimized_Prepared_Async
 	// add more methods here
 )
 
@@ -36,6 +37,8 @@ func (i InsertionMethod) ToString() string {
 		return "M_Naive_Pragma_Optimized"
 	case M_Batched_Optimized_Prepared:
 		return "M_Batched_Optimized_Prepared"
+	case M_Batched_Optimized_Prepared_Async:
+		return "M_Batched_Optimized_Prepared_Async"
 	default:
 		return "NULL"
 	}
@@ -85,6 +88,13 @@ func Runner(method InsertionMethod, numberOfRows uint64, sqliteDB *sql.DB) {
 		{
 			start := time.Now()
 			BatchedPragmaOptimizedPrepared(uint64(numberOfRows), sqliteDB)
+			elapsed := time.Since(start)
+			fmt.Printf("Time in seconds for %s: %f seconds \n", method.ToString(), elapsed.Seconds())
+		}
+	case M_Batched_Optimized_Prepared_Async:
+		{
+			start := time.Now()
+			BatchedPragmaOptimizedPreparedAsync(uint64(numberOfRows), sqliteDB)
 			elapsed := time.Since(start)
 			fmt.Printf("Time in seconds for %s: %f seconds \n", method.ToString(), elapsed.Seconds())
 		}
